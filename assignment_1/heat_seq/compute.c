@@ -11,6 +11,7 @@
 // / printf("%E", res[IDX(i, j, M)]);
 #define CROSS_RATIO 0.14644660940672627
 #define DIAGONAL_RATIO 0.10355339059327377
+#define VISUALIZATION
 
 double calcKernel(int i, int j, int rows, int colls, const Indexes *indexes) {
   double corners_sum = 0;
@@ -148,6 +149,16 @@ void do_compute(const struct parameters *p, struct results *r) {
     if (p->threshold > max_diff) {
       break;
     }
+
+  #ifdef VISUALIZATION
+    begin_picture(iter, M, N, p->io_tmin, p->io_tmax);
+      for(size_t i = 0; i < N; ++i){
+        for(size_t j = 0; j< M;++j){
+           draw_point(i, j, res[IDX(i,j,M)]);
+        }
+      }
+    end_picture();
+  #endif
   }
 
   r->niter = iter;

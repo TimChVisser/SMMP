@@ -7,7 +7,7 @@ CC=gcc
 INCLUDES=-I../../include
 
 ifndef DEBUG
-CFLAGS=-O2 -g -std=c99
+CFLAGS=-O2 -std=c99
 LIB=
 else
 CFLAGS=-O0 -g3 -std=c99

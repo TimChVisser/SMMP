@@ -1,18 +1,7 @@
 #include "compute.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <time.h>
 
-/// Replace/erase the following line:
-#include "ref1.c"
 
-#define IDX(i, j, cols) (i * cols + j)
-// / printf("%E", res[IDX(i, j, M)]);
-#define CROSS_RATIO 0.14644660940672627
-#define DIAGONAL_RATIO 0.10355339059327377
-// #define VISUALIZATION
+
 
 double calcKernel(int i, int j, int rows, int colls, const Indexes *indexes,
                   const double *temps) {
@@ -97,27 +86,42 @@ double avgTemp(const double *res, int length) {
   return temps / length;
 }
 
+double maxDiff(const double *temps,const double *last_temps,double length){
+  double max_diff = 0;
+  for (size_t i = 0; i < length; ++i) {
+    double diff = temps[i] - last_temps[i];
+    if (diff > max_diff) {
+      max_diff = diff;
+    }
+  }
+  return max_diff;
+}
+
 void sendStatistics(const struct parameters *p, struct results *stats,
                     const double *temps, const double *last_temps, int length,
-                    int iteration, double time, double *max_diff) {
+                    int iteration, double time) {
 
   double tmin = minTemp(temps, length);
   double tmax = maxTemp(temps, length);
   double temp_avg = avgTemp(temps, length);
-
-  for (size_t i = 0; i < length; ++i) {
-    double diff = temps[i] - last_temps[i];
-    if (diff > *max_diff) {
-      (*max_diff) = diff;
-    }
-  }
   stats->niter = iteration;
   stats->tmin = tmin;
   stats->tmax = tmax;
   stats->tavg = temp_avg;
-  stats->maxdiff = (*max_diff);
+  stats->maxdiff = maxDiff(temps,last_temps,length);
   stats->time = time;
   report_results(p, stats);
+}
+
+void visualize(const struct parameters *p, const double *res, int iter, int rows,
+               int cols) {
+  begin_picture(iter, cols, rows, p->io_tmin, p->io_tmax);
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      draw_point(i, j, res[IDX(i, j, cols)]);
+    }
+  }
+  end_picture();
 }
 
 void do_compute(const struct parameters *p, struct results *r) {
@@ -131,66 +135,56 @@ void do_compute(const struct parameters *p, struct results *r) {
   memcpy(last_res, res, length_alloc);
 
   // compute indexes
-  printf("sizeof one Index struct %lli\n", sizeof(Indexes));
+  printf("sizeof one Index struct %lui\n", sizeof(Indexes));
   Indexes *indexes = (Indexes *)malloc(length_cells * sizeof(Indexes));
   precomputeIndexes(cols, rows, indexes);
-  // for(int i = 0;i<5;++i){
-  //   for(int k = 0; k<9;++k){
-  //     printf("%i  ", indexes[i].index[k]);
-  //   }
-  //   printf("\n%i:%i\n",i,length_cells);
-  // }
 
-  // statistics
-  // for (size_t i = 0; i < 9; ++i) {
-  //   if (i % 3 == 0) {
-  //     printf("\n");
-  //   }
-  //   printf("%i  ", indexes[IDX(1, 101, cols)].index[i]);
-  // }
-  double start = 0; //(double)time(NULL);
+  // run main loop
   int iter = 0;
   double time = 0;
+  struct timeval tv1, tv2;
+  gettimeofday(&tv1, NULL);
   for (; iter < p->maxiter; ++iter) {
 
 #ifdef VISUALIZATION
-    begin_picture(iter, cols, rows, p->io_tmin, p->io_tmax);
-    for (size_t i = 0; i < rows; ++i) {
-      for (size_t j = 0; j < cols; ++j) {
-        draw_point(i, j, res[IDX(i, j, cols)]);
-      }
-    }
-    end_picture();
+    visualize(p,res,iter,rows,cols);
 #endif
-
     memcpy(last_res, res, length_alloc);
 
     for (int i = 0; i < rows; ++i) {
       for (int j = 0; j < cols; ++j) {
         int idx = IDX(i, j, cols);
         double conductivity = p->conductivity[idx];
-        // printf("%e\n",conductivity );
+
         double new_temp = calcKernel(i, j, rows, cols, indexes, last_res);
         double temp =
             conductivity * last_res[idx] + (1 - conductivity) * new_temp;
-        // double temp = new_temp;
+
         res[idx] = temp;
       }
-      // printf("\n\n");
     }
-    // double end = (double)time(NULL);
-    time = 0;//end - start;
-    if (iter % p->period == 0) {
-      double max_diff = 0;
-      sendStatistics(p, r, res, last_res, length_cells, iter, time, &max_diff);
-      if (p->threshold > max_diff) {
+
+    if (p->threshold > maxDiff(res,last_res,length_cells)) {
         break;
-      }
+    }
+
+    if (iter % p->period == 0) {
+      gettimeofday(&tv2, NULL);
+      time = (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
+              (double)(tv2.tv_sec - tv1.tv_sec);
+      sendStatistics(p, r, res, last_res, length_cells, iter, time);
+
+      gettimeofday(&tv1, NULL);
     }
   }
 
-  double max_diff = 0;
-  sendStatistics(p, r, res, last_res, length_cells, iter, time, &max_diff);
+  visualize(p,res,0,rows,cols);
+
+  gettimeofday(&tv2, NULL);
+      time = (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
+              (double)(tv2.tv_sec - tv1.tv_sec);
+  sendStatistics(p, r, res, last_res, length_cells, iter, time);
+
   free(res);
   free(last_res);
   free(indexes);

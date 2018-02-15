@@ -13,6 +13,7 @@ else
 CFLAGS=-O0 -g3 -std=c99
 LIB=
 endif
+# -ftree-vectorize -ftree-vectorizer-verbose=10
 
 all: $(PRJ)
 

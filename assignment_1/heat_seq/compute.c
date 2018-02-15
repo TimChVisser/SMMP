@@ -1,7 +1,16 @@
 #include "compute.h"
 
 
+typedef struct {
+  int index[9]; // indexes in temperature array. index[0] - top left cell of kernel
+          // index[8] - bottom right cell of kernel
+          // left and right border just overflows
+} Indexes;
 
+double calcKernel(int i, int j, int rows, int colls, const Indexes *indexes,
+                  const double *temps);
+
+void precomputeIndexes(int cols, int rows, Indexes *indexes);
 
 double calcKernel(int i, int j, int rows, int colls, const Indexes *indexes,
                   const double *temps) {

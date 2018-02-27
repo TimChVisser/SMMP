@@ -9,60 +9,18 @@
 #include <unistd.h>
 
 #define INSERT_SORT
+#include "sort.h"
+
 /* Ordering of the vector */
 typedef enum Ordering { ASCENDING, DESCENDING, RANDOM } Order;
+void msort(int *data, long length, Order order);
+void initVector(Order order, int *vector, long length);
 
 int debug = 0;
 int multicore = 0;
 int cores = 0;
 int iterations = 1;
 
-void insertionSort(int *A, long i_start, long i_end);
-void merge(int *B, long i_start, long i_middle, long i_end, const int *A);
-void splitMerge(int *B, long i_start, long i_end, const int *A);
-void splitMergeP(int *B, long i_start, long i_end, const int *A);
-void msort(int *data, long length, Order order);
-
-void print_v(int *v, long l) {
-  printf("\n");
-  for (long i = 0; i < l; i++) {
-    if (i != 0 && (i % 10 == 0)) {
-      printf("\n");
-    }
-    printf("%d ", v[i]);
-  }
-  printf("\n");
-}
-
-void printRange(const int *v, long start, long end) {
-  printf("\n");
-  for (long i = start; i < end; i++) {
-    if (i != 0 && (i % 10 == 0)) {
-      printf("\n");
-    }
-    printf("%d ", v[i]);
-  }
-  printf("\n");
-}
-void initVector(Order order, int *vector, long length) {
-  switch (order) {
-  case ASCENDING:
-    for (long i = 0; i < length; i++) {
-      vector[i] = (int)i;
-    }
-    break;
-  case DESCENDING:
-    for (long i = 0; i < length; i++) {
-      vector[i] = (int)(length - i);
-    }
-    break;
-  case RANDOM:
-    for (long i = 0; i < length; i++) {
-      vector[i] = rand();
-    }
-    break;
-  }
-}
 int main(int argc, char **argv) {
 
   int c;
@@ -135,103 +93,41 @@ int main(int argc, char **argv) {
   /* Sort */
   msort(vector, length, order);
 
-  if (debug) {
-    print_v(vector, length);
-  }
+  // if (debug) {
+  //   print_v(vector, length);
+  // }
 
-  free(vector);
+  // free(vector);
   return 0;
 }
-////////////////////////////////////////////////////////
 
-void insertionSort(int *A, long i_start, long i_end) {
-  long i, j;
-  int val;
-  // int * start_adr = A + i_start;
-  int *current_addr_j = A + i_start;
-  for (i = i_start + 1; i < i_end; ++i) {
-    val = *(A + i);
-    j = i - 1;
-    current_addr_j = A + i - 1;
-    while (j >= i_start && *(current_addr_j) > val) {
-
-      *(current_addr_j + 1) = *(current_addr_j);
-      *(current_addr_j) = val;
-      --current_addr_j;
-      --j;
+void initVector(Order order, int *vector, long length) {
+  switch (order) {
+  case ASCENDING:
+    for (long i = 0; i < length; i++) {
+      vector[i] = (int)i;
     }
-  }
-}
-
-///////////
-
-// i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
-void splitMerge(int *B, long i_start, long i_end, const int *A) {
-#ifdef INSERT_SORT
-  if ((i_end - i_start) < 1000) {
-    insertionSort(B, i_start, i_end);
-    return;
-  }
-#else
-  if ((i_end - i_start) < 2)
-    return;
-#endif
-  long i_middle = (long)((i_end + i_start) / 2);
-
-  splitMerge(B, i_start, i_middle, A);
-  splitMerge(B, i_middle, i_end, A);
-  merge(B, i_start, i_middle, i_end, A);
-}
-
-// i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
-void splitMergeP(int *B, long i_start, long i_end, const int *A) {
-#ifdef INSERT_SORT
-  if ((i_end - i_start) < 1000) {
-    insertionSort(B, i_start, i_end);
-    return;
-  }
-#else
-  if ((i_end - i_start) < 2)
-    return;
-#endif
-  long i_middle = (long)((i_end + i_start) / 2);
-#pragma omp tasks shared(A, B) firstprivate(i_start, i_middle)
-  splitMergeP(B, i_start, i_middle, A);
-
-#pragma omp tasks shared(A, B) firstprivate(i_end, i_middle)
-  splitMergeP(B, i_middle, i_end, A);
-
-#pragma omp taskwait
-  merge(B, i_start, i_middle, i_end, A);
-}
-
-//  Left source half is A[ iBegin:iMiddle-1].
-// Right source half is A[iMiddle:iEnd-1   ].
-// Result is            B[ iBegin:iEnd-1   ].
-void merge(int *B, long i_start, long i_middle, long i_end, const int *A) {
-  long i = i_start;
-  long j = i_middle;
-  for (long k = i_start; k < i_end; k++) {
-    // If left run head exists and is <= existing right run head.
-    if (i < i_middle && (j >= i_end || A[i] <= A[j])) {
-      B[k] = A[i];
-      i = i + 1;
-    } else {
-      B[k] = A[j];
-      j = j + 1;
+    break;
+  case DESCENDING:
+    for (long i = 0; i < length; i++) {
+      vector[i] = (int)(length - i);
     }
+    break;
+  case RANDOM:
+    for (long i = 0; i < length; i++) {
+      vector[i] = rand();
+    }
+    break;
   }
 }
-//////////////////////// PARALEL
 
-////////////////////////////////////////////
 void msort(int *data, long length, Order order) {
-  int *B = (int *)malloc(length * sizeof(int));
-  if (B == NULL) {
-    fprintf(stderr, "Malloc failed - B...\n");
-    return;
-  }
-  int *A = data;
+  // int *B = (int *)malloc(length * sizeof(int));
+  // if (B == NULL) {
+  //   fprintf(stderr, "Malloc failed - B...\n");
+  //   return;
+  // }
+  // int *A = data;
   // print_v(A+10, length-10);
   // insertionSort(A, 10, length);
   // printf("---------------------\n");
@@ -239,9 +135,20 @@ void msort(int *data, long length, Order order) {
   double time;
 
   for (long i = 0; i < iterations; ++i) {
-    initVector(order, A, length);
+    int *B = (int *)malloc(length * sizeof(int));
+    if (B == NULL) {
+      fprintf(stderr, "Malloc failed - B...\n");
+      return;
+    }
 
+    int *A = (int *)malloc(length * sizeof(int));
+    if (A == NULL) {
+      fprintf(stderr, "Malloc failed - B...\n");
+      return;
+    }
+    initVector(order, A, length);
     memcpy(B, A, length);
+
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     if (multicore) {
@@ -256,10 +163,12 @@ void msort(int *data, long length, Order order) {
     gettimeofday(&tv2, NULL);
     time += (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
             (double)(tv2.tv_sec - tv1.tv_sec);
+    free(A);
+    free(B);
   }
   // average times
   printf("%e\n", time / iterations);
 
-  data = B;
-  free(B);
+  // data = B;
+  // free(B);
 }

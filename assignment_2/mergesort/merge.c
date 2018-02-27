@@ -18,7 +18,7 @@ void initVector(Order order, int *vector, long length);
 
 int debug = 0;
 int multicore = 0;
-int cores = 0;
+int cores = 1;
 int iterations = 1;
 
 int main(int argc, char **argv) {
@@ -143,19 +143,19 @@ void msort(int *data, long length, Order order) {
 
     int *A = (int *)malloc(length * sizeof(int));
     if (A == NULL) {
-      fprintf(stderr, "Malloc failed - B...\n");
+      fprintf(stderr, "Malloc failed - A...\n");
       return;
     }
     initVector(order, A, length);
-    memcpy(B, A, length);
+    memcpy(B, A, length * sizeof(int));
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     if (multicore) {
-#pragma omp parallel shared(B, A), firstprivate(length)
+#pragma omp parallel num_threads(cores), shared(B, A), firstprivate(length)
       {
 #pragma omp single
-        splitMerge(B, 0, length, A);
+        splitMergeP(B, 0, length, A);
       }
     } else {
       splitMerge(B, 0, length, A);
@@ -163,6 +163,8 @@ void msort(int *data, long length, Order order) {
     gettimeofday(&tv2, NULL);
     time += (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
             (double)(tv2.tv_sec - tv1.tv_sec);
+
+    // print_v(A, length);
     free(A);
     free(B);
   }

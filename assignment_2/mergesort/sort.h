@@ -6,9 +6,9 @@
 
 
 void insertionSort(int *A, long i_start, long i_end);
-void merge(int *B, long i_start, long i_middle, long i_end, const int *A);
-void splitMerge(int *B, long i_start, long i_end, const int *A);
-void splitMergeP(int *B, long i_start, long i_end, const int *A);
+void merge(int *B, long i_start, long i_middle, long i_end,int *A);
+void splitMerge(int *B, long i_start, long i_end, int *A);
+void splitMergeP(int *B, long i_start, long i_end, int *A);
 
 
 void print_v(int *v, long l) {
@@ -57,40 +57,41 @@ void insertionSort(int *A, long i_start, long i_end) {
 ///////////
 
 // i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
-void splitMerge(int *B, long i_start, long i_end, const int *A) {
+void splitMerge(int *B, long i_start, long i_end, int *A) {
 #ifdef INSERT_SORT
   if ((i_end - i_start) < 1024) {
-    insertionSort(B, i_start, i_end);
+    insertionSort(A, i_start, i_end);
     return;
   }
 #else
   if ((i_end - i_start) < 2)
+    // A[i_start] = B[i_start];
     return;
 #endif
   long i_middle = (long)((i_end + i_start) / 2);
-
-  splitMerge(B, i_start, i_middle, A);
-  splitMerge(B, i_middle, i_end, A);
+  splitMerge(A, i_start, i_middle, B);
+  splitMerge(A, i_middle, i_end, B);
   merge(B, i_start, i_middle, i_end, A);
 }
 
 // i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
-void splitMergeP(int *B, long i_start, long i_end, const int *A) {
+void splitMergeP(int *B, long i_start, long i_end, int *A) {
 #ifdef INSERT_SORT
   if ((i_end - i_start) < 1024) {
-    insertionSort(B, i_start, i_end);
+    insertionSort(A, i_start, i_end);
     return;
   }
 #else
   if ((i_end - i_start) < 2)
     return;
 #endif
-  long i_middle = (long)((i_end + i_start) / 2);
-#pragma omp tasks shared(A, B) firstprivate(i_start, i_middle)
-  splitMergeP(B, i_start, i_middle, A);
 
-#pragma omp tasks shared(A, B) firstprivate(i_end, i_middle)
-  splitMergeP(B, i_middle, i_end, A);
+  long i_middle = (long)((i_end + i_start) / 2);
+#pragma omp task shared(A, B) firstprivate(i_start, i_middle)
+  splitMergeP(A, i_start, i_middle, B);
+
+#pragma omp task shared(A, B) firstprivate(i_end, i_middle)
+  splitMergeP(A, i_middle, i_end, B);
 
 #pragma omp taskwait
   merge(B, i_start, i_middle, i_end, A);
@@ -99,7 +100,7 @@ void splitMergeP(int *B, long i_start, long i_end, const int *A) {
 //  Left source half is A[ iBegin:iMiddle-1].
 // Right source half is A[iMiddle:iEnd-1   ].
 // Result is            B[ iBegin:iEnd-1   ].
-void merge(int *B, long i_start, long i_middle, long i_end, const int *A) {
+void merge(int *A, long i_start, long i_middle, long i_end, int *B) {
   long i = i_start;
   long j = i_middle;
   for (long k = i_start; k < i_end; k++) {

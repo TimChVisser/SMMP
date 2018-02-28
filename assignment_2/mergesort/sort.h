@@ -14,7 +14,7 @@ void splitMergeP(int *B, long i_start, long i_end, int *A);
 void print_v(int *v, long l) {
   printf("\n");
   for (long i = 0; i < l; i++) {
-    if (i != 0 && (i % 10 == 0)) {
+    if (i != 0 && (i % 110 == 0)) {
       printf("\n");
     }
     printf("%d ", v[i]);

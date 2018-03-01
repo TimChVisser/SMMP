@@ -25,28 +25,27 @@ struct Array {
 
 long random_at_most(long max) {
   unsigned long
-    // max <= RAND_MAX < ULONG_MAX, so this is okay.
-    num_bins = (unsigned long) max + 1,
-    num_rand = (unsigned long) RAND_MAX + 1,
-    bin_size = num_rand / num_bins,
-    defect   = num_rand % num_bins;
+      // max <= RAND_MAX < ULONG_MAX, so this is okay.
+      num_bins = (unsigned long)max + 1,
+      num_rand = (unsigned long)RAND_MAX + 1, bin_size = num_rand / num_bins,
+      defect = num_rand % num_bins;
 
   long x;
   do {
-   x = rand();
+    x = rand();
   }
   // This is carefully written not to overflow
   while (num_rand - defect <= (unsigned long)x);
 
   // Truncated division is intentional
-  return x/bin_size;
+  return x / bin_size;
 }
 
 void createInputVectors(struct Array *A, long length, long max_iner_length,
                         Order order) {
   srand(seed);
   for (long i = 0; i < length; ++i) {
-    A[i].size = random_at_most(max_iner_length-1) + 1;
+    A[i].size = random_at_most(max_iner_length - 1) + 1;
     A[i].data = (int *)malloc(A[i].size * sizeof(int));
 
     if (A[i].data == NULL) {
@@ -81,29 +80,31 @@ void vecsort(long length, long max_iner_length, Order order) {
 
   double time_iner = 0;
   double time_total = 0;
+
+  struct Array *main_arr =
+      (struct Array *)malloc(length * sizeof(struct Array));
+
+  if (main_arr == NULL) {
+    fprintf(stderr, "Malloc failed - main_arr...\n");
+    return;
+  }
+
+  int **scratch_arr = (int **)malloc(length * sizeof(int *));
+  for (long i = 0; i < cores1; ++i) {
+    scratch_arr[i] = (int *)malloc(max_iner_length * sizeof(int));
+  }
+
   for (long i = 0; i < iterations; ++i) {
 
-    struct Array *main_arr =
-        (struct Array *)malloc(length * sizeof(struct Array));
-
-    if (main_arr == NULL) {
-      fprintf(stderr, "Malloc failed - main_arr...\n");
-      return;
-    }
     createInputVectors(main_arr, length, max_iner_length, order);
-
-    int **scratch_arr = (int **)malloc(length * sizeof(int *));
-    for (i = 0; i < cores1; ++i) {
-      scratch_arr[i] = (int *)malloc(max_iner_length * sizeof(int));
-    }
 
     int thread_id = 0;
     struct timeval tv3, tv4;
-    double time =0;
+    double time = 0;
     gettimeofday(&tv3, NULL);
 
-#pragma omp parallel for num_threads(cores1) schedule(guided) \
- shared(scratch_arr, main_arr) reduction(+ : time)
+#pragma omp parallel for num_threads(cores1) schedule(guided)                  \
+    shared(scratch_arr, main_arr) reduction(+ : time)
     struct timeval tv1, tv2;
     for (int i = 0; i < length; ++i) {
 
@@ -115,13 +116,13 @@ void vecsort(long length, long max_iner_length, Order order) {
 #pragma omp parallel num_threads(cores2)
       {
 #pragma omp single nowait
-      splitMergeP(scratch_arr[thread_id], 0, main_arr[i].size,
-                  main_arr[i].data);
+        splitMergeP(scratch_arr[thread_id], 0, main_arr[i].size,
+                    main_arr[i].data);
       }
       gettimeofday(&tv2, NULL);
 
       time = time + ((double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
-              (double)(tv2.tv_sec - tv1.tv_sec));
+                     (double)(tv2.tv_sec - tv1.tv_sec));
     }
 
     gettimeofday(&tv4, NULL);
@@ -130,24 +131,26 @@ void vecsort(long length, long max_iner_length, Order order) {
     time_iner += time;
 
     // print result
-    if(debug == 1){
+    if (debug == 1) {
       for (long i = 0; i < length; ++i) {
-      print_v(main_arr[i].data,main_arr[i].size);
+        print_v(main_arr[i].data, main_arr[i].size);
       }
     }
 
-    // deallocate everything
+    // deallocate iner vectors
     for (long i = 0; i < length; ++i) {
       free(main_arr[i].data);
     }
-    free(main_arr);
-    for (i = 0; i < cores1; ++i) {
-      free(scratch_arr[i]);
-    }
-    free(scratch_arr);
   }
   // average times
-  printf("%e,%e\n", time_iner / iterations, time_total / iterations);
+  printf("%i,%i,%i,%i,%e\n", cores1, cores2, length, max_iner_length,
+         time_total / iterations);
+
+  free(main_arr);
+  for (long i = 0; i < cores1; ++i) {
+    free(scratch_arr[i]);
+  }
+  free(scratch_arr);
 }
 
 int main(int argc, char **argv) {
@@ -156,6 +159,7 @@ int main(int argc, char **argv) {
 
   long length = 1e4;
   long max_iner_length = 1e5;
+
   Order order = DESCENDING;
 
   /* Read command-line options. */
@@ -210,7 +214,6 @@ int main(int argc, char **argv) {
 
   /* Seed such that we can always reproduce the same random vector */
   srand(seed);
-
 
   // if(debug) {
   //   print_v(/* ... */);

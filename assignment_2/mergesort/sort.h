@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-long min_parallel_length =  100000;
+long min_parallel_length =  1;
 
 void insertionSort(int *A, long i_start, long i_end);
 void merge(int *B, long i_start, long i_middle, long i_end,int *A);

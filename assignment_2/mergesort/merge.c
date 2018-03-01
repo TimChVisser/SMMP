@@ -97,11 +97,11 @@ int main(int argc, char **argv) {
   /* Sort */
   msort(vector, length, order);
 
-  // if (debug) {
-  //   print_v(vector, length);
-  // }
+  if (debug) {
+    print_v(vector, length);
+  }
 
-  // free(vector);
+  free(vector);
   return 0;
 }
 
@@ -167,13 +167,13 @@ void msort(int *data, long length, Order order) {
     gettimeofday(&tv2, NULL);
     time += (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
             (double)(tv2.tv_sec - tv1.tv_sec);
-
-    memcpy(data,A,length * sizeof(int));
+     if(debug){
+      memcpy(data,A,length * sizeof(int));
+    }
     free(A);
     free(B);
   }
-
-  // print_v(data, length);
+  //
   // average times
   //printf("%i, %e\n", sorted(data,length),time / iterations);
   if(!multicore)

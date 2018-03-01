@@ -102,12 +102,10 @@ void vecsort(long length, long max_iner_length, Order order) {
     struct timeval tv3, tv4;
     double time = 0;
     gettimeofday(&tv3, NULL);
-
 #pragma omp parallel for num_threads(cores1) schedule(guided)                  \
     shared(scratch_arr, main_arr) reduction(+ : time)
-    struct timeval tv1, tv2;
     for (int i = 0; i < length; ++i) {
-
+      struct timeval tv1, tv2;
       memcpy(scratch_arr[thread_id], main_arr[i].data,
              main_arr[i].size * sizeof(int));
 

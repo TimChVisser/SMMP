@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 
+long min_parallel_length =  100000;
 
 void insertionSort(int *A, long i_start, long i_end);
 void merge(int *B, long i_start, long i_middle, long i_end,int *A);
@@ -33,6 +34,14 @@ void printRange(const int *v, long start, long end) {
   printf("\n");
 }
 
+int sorted(int *v, long l){
+  for(int i = 0; i< l-1; ++i){
+    if(v[i] > v[i+1])
+      return 0;
+  }
+  return 1;
+}
+
 ////////////////////////////////////////////////////////
 
 void insertionSort(int *A, long i_start, long i_end) {
@@ -59,7 +68,7 @@ void insertionSort(int *A, long i_start, long i_end) {
 // i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
 void splitMerge(int *B, long i_start, long i_end, int *A) {
 #ifdef INSERT_SORT
-  if ((i_end - i_start) < 1024) {
+  if ((i_end - i_start) < 256) {
     insertionSort(A, i_start, i_end);
     return;
   }
@@ -76,15 +85,13 @@ void splitMerge(int *B, long i_start, long i_end, int *A) {
 
 // i_start is inclusive; i_end is exclusive (A[i_end] is not in the set).
 void splitMergeP(int *B, long i_start, long i_end, int *A) {
-#ifdef INSERT_SORT
-  if ((i_end - i_start) < 1024) {
-    insertionSort(A, i_start, i_end);
+  // printf("available threads: %i, %i \n",omp_get_num_threads(),omp_get_thread_num());
+  long length = (i_end - i_start);
+
+  if(length < min_parallel_length){
+    splitMerge(B,i_start,i_end,A);
     return;
   }
-#else
-  if ((i_end - i_start) < 2)
-    return;
-#endif
 
   long i_middle = (long)((i_end + i_start) / 2);
 #pragma omp task shared(A, B) firstprivate(i_start, i_middle)

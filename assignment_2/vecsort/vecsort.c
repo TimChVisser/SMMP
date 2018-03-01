@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
   Order order = DESCENDING;
 
   /* Read command-line options. */
-  while ((c = getopt(argc, argv, "adrgl:s:v:c:m:i:")) != -1) {
+  while ((c = getopt(argc, argv, "adrgl:s:v:c:m:i:L:")) != -1) {
     switch (c) {
     case 'a':
       order = ASCENDING;
@@ -190,6 +190,9 @@ int main(int argc, char **argv) {
       break;
     case 'i':
       iterations = atoi(optarg);
+      break;
+    case 'L':
+      min_parallel_length = atol(optarg);
       break;
     case '?':
       if (optopt == 'l' || optopt == 's') {

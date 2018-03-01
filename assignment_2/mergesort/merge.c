@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#define INSERT_SORT
+// #define INSERT_SORT
 #include "sort.h"
 
 /* Ordering of the vector */
@@ -21,6 +21,7 @@ int multicore = 0;
 int cores = 1;
 int iterations = 1;
 
+
 int main(int argc, char **argv) {
 
   int c;
@@ -30,7 +31,7 @@ int main(int argc, char **argv) {
   int *vector;
 
   /* Read command-line options. */
-  while ((c = getopt(argc, argv, "adrgpl:s:c:i:")) != -1) {
+  while ((c = getopt(argc, argv, "adrgpl:s:c:i:L:")) != -1) {
     switch (c) {
     case 'a':
       order = ASCENDING;
@@ -58,6 +59,9 @@ int main(int argc, char **argv) {
       break;
     case 'i':
       iterations = atoi(optarg);
+      break;
+    case 'L':
+      min_parallel_length = atol(optarg);
       break;
     case '?':
       if (optopt == 'l' || optopt == 's') {
@@ -152,7 +156,7 @@ void msort(int *data, long length, Order order) {
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     if (multicore) {
-#pragma omp parallel num_threads(cores), shared(B, A), firstprivate(length)
+#pragma omp parallel num_threads(cores), shared(B, A), firstprivate(length),firstprivate(min_parallel_length)
       {
 #pragma omp single
         splitMergeP(B, 0, length, A);
@@ -164,13 +168,17 @@ void msort(int *data, long length, Order order) {
     time += (double)(tv2.tv_usec - tv1.tv_usec) / 1000000 +
             (double)(tv2.tv_sec - tv1.tv_sec);
 
-    // print_v(A, length);
+    memcpy(data,A,length * sizeof(int));
     free(A);
     free(B);
   }
-  // average times
-  printf("%e\n", time / iterations);
 
+  // print_v(data, length);
+  // average times
+  //printf("%i, %e\n", sorted(data,length),time / iterations);
+  if(!multicore)
+    cores = 0;
+   printf("%i %i %i %i %d %e\n", min_parallel_length,multicore, cores, length, order, time / iterations);
   // data = B;
   // free(B);
 }

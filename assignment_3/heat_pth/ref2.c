@@ -106,7 +106,7 @@ for (iter = 1; iter <= p->maxiter; ++iter) {
 #ifdef OPENMP
 #pragma omp parallel num_threads(threads)
   {
-#pragma omp for
+#pragma omp for schedule(static,(h-1)/threads)
     for (i = 1; i < h - 1; ++i) {
       for (j = 1; j < w - 1; ++j) {
 

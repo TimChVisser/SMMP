@@ -10,10 +10,11 @@ run () {
 			m=`echo $data | grep -o [0-9]* | tail -n 1`
 			n=`echo $data | grep -o [0-9]* | head -n 1`
 			./heat_pth -n $n -m $m -i 100 -r 100 -c ../../$data -t ../../$data -p $cores | tail -n 1
+			if [ $use_cores = "0" ]; then
+				break
+			fi
 		done
-		if [ $use_cores = "0" ]; then
-			break
-		fi
+
 	done
 }
 
@@ -21,7 +22,7 @@ cp ref2.c ref2.c.backup
 make clean
 make
 use_cores=0
-run
+ run
 
 use_cores=1
 echo "openMP\n"

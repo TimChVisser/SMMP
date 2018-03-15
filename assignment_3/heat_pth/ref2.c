@@ -20,10 +20,9 @@ double (*restrict c)[h][w] = malloc(h * w * sizeof(double));
 
 struct timeval before;
 
-
 /* set initial temperatures and conductivities */
 //#pragma omp parallel for collapse(2)
-for(i = 1; i < h - 1; ++i){
+for (i = 1; i < h - 1; ++i) {
   for (j = 1; j < w - 1; ++j) {
     (*g1)[i][j] = (*tinit)[i - 1][j - 1];
     (*c)[i][j] = (*cinit)[i - 1][j - 1];
@@ -64,67 +63,72 @@ for (iter = 1; iter <= p->maxiter; ++iter) {
 /* compute */
 
 #ifdef PTHREAD
-   printf("hello1%i\n",omp_get_num_threads() );
   pthread_t thread_ids[threads];
   struct Params params[threads];
   double results[threads];
   pthread_attr_t attributes;
   pthread_attr_init(&attributes);
-  pthread_attr_setdetachstate(&attributes ,  PTHREAD_CREATE_JOINABLE );
-   pthread_attr_setscope( &attributes ,  PTHREAD_SCOPE_SYSTEM );
-  for(size_t i =0; i < threads; ++i){
+  // pthread_attr_setdetachstate(&attributes ,  PTHREAD_CREATE_JOINABLE );
+  // pthread_attr_setscope( &attributes ,  PTHREAD_SCOPE_SYSTEM );
+  for (size_t i = 0; i < threads; ++i) {
+    params[i].w = w;
+    params[i].h = h;
     params[i].src = src;
     params[i].dst = dst;
     params[i].c = c;
-    params[i].start = i * ((h-1) / threads);
-    if(threads-1 == i)
-    {
-        params[i].end = h - 1;
-    }else{
-        params[i].end = (i + 1) * ((h-1) / threads) -1;
+    if (i == 0)
+      params[i].start = i * ((h - 1) / threads) + 1;
+    else
+      params[i].start = params[i-1].end;
+
+    if (threads - 1 == i) {
+      params[i].end = h - 1;
+    } else {
+      params[i].end = (i + 1) * ((h - 1) / threads) - 1;
     }
     params[i].maxdiff = &(results[i]);
-    pthread_create(&thread_ids[i],&attributes,&performeCalc,&params[i]);
+    pthread_create(&thread_ids[i], &attributes, &performeCalc, &params[i]);
   }
-  for(size_t i =0 ;i < threads; ++i){
-    pthread_join(thread_ids[i],NULL);
+  for (size_t i = 0; i < threads; ++i) {
+    pthread_join(thread_ids[i], NULL);
   }
-  pthread_attr_destroy(&attributes);
+
   // reduction of maxdiff
   maxdiff = results[0];
-  for(size_t i =1; i < threads; ++i){
-    if ((results[i]) > maxdiff){
-        maxdiff = (results[i]);
+  for (size_t i = 1; i < threads; ++i) {
+    if ((results[i]) > maxdiff) {
+      maxdiff = (results[i]);
     }
   }
+  pthread_attr_destroy(&attributes);
 
 #else
 #ifdef OPENMP
 #pragma omp parallel num_threads(threads)
-{
+  {
 #pragma omp for
-  for (i = 1; i < h - 1; ++i) {
-    for (j = 1; j < w - 1; ++j) {
+    for (i = 1; i < h - 1; ++i) {
+      for (j = 1; j < w - 1; ++j) {
 
-      double v = (*c)[i][j];
-      double restw = 1.0 - v;
+        double v = (*c)[i][j];
+        double restw = 1.0 - v;
 
-      (*dst)[i][j] = v * (*src)[i][j] +
+        (*dst)[i][j] = v * (*src)[i][j] +
 
-                     ((*src)[i + 1][j] + (*src)[i - 1][j] + (*src)[i][j + 1] +
-                      (*src)[i][j - 1]) *
-                         (restw * c_cdir) +
+                       ((*src)[i + 1][j] + (*src)[i - 1][j] + (*src)[i][j + 1] +
+                        (*src)[i][j - 1]) *
+                           (restw * c_cdir) +
 
-                     ((*src)[i - 1][j - 1] + (*src)[i - 1][j + 1] +
-                      (*src)[i + 1][j - 1] + (*src)[i + 1][j + 1]) *
-                         (restw * c_cdiag);
+                       ((*src)[i - 1][j - 1] + (*src)[i - 1][j + 1] +
+                        (*src)[i + 1][j - 1] + (*src)[i + 1][j + 1]) *
+                           (restw * c_cdiag);
 
-      double diff = fabs((*dst)[i][j] - (*src)[i][j]);
-      if (diff > maxdiff)
-        maxdiff = diff;
+        double diff = fabs((*dst)[i][j] - (*src)[i][j]);
+        if (diff > maxdiff)
+          maxdiff = diff;
+      }
     }
   }
-}
 #else
   for (i = 1; i < h - 1; ++i) {
     for (j = 1; j < w - 1; ++j) {

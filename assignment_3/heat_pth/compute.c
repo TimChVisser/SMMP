@@ -39,7 +39,7 @@ void * performeCalc(void * param) {
 
       double v = (*c)[i][j];
       double restw = 1.0 - v;
-
+      // printf("cell %e",(*dst)[i][j]);
       (*dst)[i][j] = v * (*src)[i][j] +
 
                      ((*src)[i + 1][j] + (*src)[i - 1][j] + (*src)[i][j + 1] +

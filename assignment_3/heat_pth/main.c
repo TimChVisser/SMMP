@@ -1,7 +1,6 @@
 #include "compute.h"
 
-//#define OPENMP
-//#define PTHREAD
+
 
 #define FPOPS_PER_POINT_PER_ITERATION (                 \
         1     /* current point 1 mul */ +               \

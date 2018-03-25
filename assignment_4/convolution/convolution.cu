@@ -13,7 +13,7 @@
 #define input_width (image_width + border_width)
 
 #define block_size_x 32
-#define block_size_y 16
+#define block_size_y 32
 
 #define SEED 1234
 
@@ -45,6 +45,21 @@ void convolutionSeq(float *output, float *input, float *filter) {
 
 
 __global__ void convolution_kernel_naive(float *output, float *input, float *filter) {
+    // global mem address for this thread
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+    const int out_x = blockIdx.x * blockDim.x + threadIdx.x ;
+    const int out_y = blockIdx.y * blockDim.y + threadIdx.y ;
+    //fprintf("error %i:%i",y,x);
+    float sum = 0;
+    //for each filter weight
+    for (int i=0; i < filter_height; i++) {
+        for (int j=0; j < filter_width; j++) {
+           sum += input[(y+i)*input_width+x+j] * filter[i*filter_width+j];
+        }
+    }
+    output[out_y*image_width+out_x] = sum; 
 
 }
 
@@ -66,6 +81,7 @@ void convolutionCUDA(float *output, float *input, float *filter) {
     // host to device 
     err = cudaMemcpy(d_input, input, input_height*input_width*sizeof(float), cudaMemcpyHostToDevice);
     if (err != cudaSuccess) { fprintf(stderr, "Error in cudaMemcpy host to device input: %s\n", cudaGetErrorString( err ));  }
+    
     err = cudaMemcpy(d_filter, filter, filter_height*filter_width*sizeof(float), cudaMemcpyHostToDevice);
     if (err != cudaSuccess) { fprintf(stderr, "Error in cudaMemcpy host to device filter: %s\n", cudaGetErrorString( err ));  }
     
@@ -78,13 +94,14 @@ void convolutionCUDA(float *output, float *input, float *filter) {
     dim3 threads(block_size_x, block_size_y);
     //problem size divided by thread block size rounded up
     dim3 grid(int(ceilf(image_width/(float)threads.x)), int(ceilf(image_height/(float)threads.y)) );
-
+    printf("grid size xy: %i: %i\n",grid.x,grid.y);
     //measure the GPU function
     kernelTime.start();
     convolution_kernel_naive<<<grid, threads>>>(d_output, d_input, d_filter);
     cudaDeviceSynchronize();
     kernelTime.stop();
  
+
     //check to see if all went well
     err = cudaGetLastError();
     if (err != cudaSuccess) { fprintf(stderr, "Error during kernel launch convolution_kernel: %s\n", cudaGetErrorString( err )); }
@@ -156,7 +173,8 @@ int main() {
     }
 
     for (i=filter_width+1; i<(filter_height - 1) * filter_width; i++) {
-	if (i % filter_width > 0 && i % filter_width < filter_width-1) filter[i]+=1.0; 
+        if (i % filter_width > 0 && i % filter_width < filter_width-1) 
+            filter[i]+=1.0; 
     }
 
     filter[filter_width*filter_height/2]=3.0;
@@ -165,7 +183,7 @@ int main() {
     //measure the CPU function
     convolutionSeq(output1, input, filter);
     //measure the GPU function
-    convolutionCUDA(output2, input, filter);
+   convolutionCUDA(output2, input, filter);
 
 
     //check the result

@@ -1,7 +1,7 @@
 NVCC		= nvcc
 CC		= g++
-#CU_FLAGS	= -O3 -g --ptxas-options=-v
-CU_FLAGS	= -O3 -g --ptxas-options=-v -arch compute_20 -code sm_20
+CU_FLAGS	= -O3 -arch compute_20 -code sm_20
+#CU_FLAGS	= -O3 -g --ptxas-options=-v -arch compute_20 -code sm_20
 CC_FLAGS	= -O3 -m64 -Wall
 
 CU_SOURCES	= convolution.cu

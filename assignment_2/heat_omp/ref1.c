@@ -27,7 +27,7 @@ static void do_copy(size_t h, size_t w,
 
 /* Does the reduction step and return if the convergence has setteled */
 static int fill_report(const struct parameters *p, struct results *r,
-                        size_t h, size_t w, 
+                        size_t h, size_t w,
                         double (*restrict a)[h][w],
                         double (*restrict b)[h][w],
                         double iter,
@@ -41,9 +41,9 @@ static int fill_report(const struct parameters *p, struct results *r,
 
     /* We have said that the final reduction does not need to be included. */
     gettimeofday(&after, NULL);
- 
+
     for (size_t i = 1; i < h - 1; ++i)
-        for (size_t j = 1; j < w - 1; ++j) 
+        for (size_t j = 1; j < w - 1; ++j)
         {
             double v = (*a)[i][j];
             double v_old = (*b)[i][j];
@@ -57,7 +57,7 @@ static int fill_report(const struct parameters *p, struct results *r,
     r->tmax = tmax;
     r->tavg = sum / (p->N * p->M);
 
-    r->time = (double)(after.tv_sec - before->tv_sec) + 
+    r->time = (double)(after.tv_sec - before->tv_sec) +
         (double)(after.tv_usec - before->tv_usec) / 1e6;
  return 0;
 }
